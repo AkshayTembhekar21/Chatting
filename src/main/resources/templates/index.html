@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Application</title>
+    <script src="https://cdn.jsdelivr.net/sockjs/1.0.3/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        #chat {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        #chat li {
+            padding: 8px;
+            margin-bottom: 10px;
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+<h2>Chat Application</h2>
+<ul id="chat"></ul>
+<input type="text" id="message" placeholder="Enter your message"/>
+<button onclick="sendMessage()">Send</button>
+
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var socket = new SockJS('/chat-websocket');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/messages', function (messageOutput) {
+                showMessage(JSON.parse(messageOutput.body));
+            });
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        console.log("Disconnected");
+    }
+
+    function sendMessage() {
+        var messageInput = document.getElementById('message');
+        var message = messageInput.value;
+        stompClient.send("/app/sendMessage", {}, JSON.stringify({'content': message, 'sender': 'User'}));
+        messageInput.value = '';
+    }
+
+    function showMessage(messageOutput) {
+        var response = document.getElementById('chat');
+        var li = document.createElement('li');
+        li.appendChild(document.createTextNode(messageOutput.sender + ": " + messageOutput.content));
+        response.appendChild(li);
+    }
+
+    connect();
+
+    window.onbeforeunload = function() {
+        disconnect();
+    };
+</script>
+</body>
+</html>
